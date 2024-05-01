@@ -23,7 +23,6 @@ app.get('/', async (req, res) => {
     try {
         const resp = await axios.get(pets, { headers });
         const data = resp.data.results;
-        console.log(data);
         res.render('pets', { title: 'Pets | HubSpot APIs', data });      
     } catch (error) {
         console.error(error);
@@ -45,7 +44,77 @@ app.get('/add', async (req, res) => {
 
 // TODO: ROUTE 3 - Create a new app.post route for the custom objects form to create or update your custom object data. Once executed, redirect the user to the homepage.
 
-// * Code for Route 3 goes here
+app.post('/add', async (req, res) => {
+    const searchTerm = req.body.nameVal;
+    const searchUrl = 'https://api.hubapi.com/crm/v3/objects/2-20576949/search';
+    
+    const headers = {
+        Authorization: `Bearer ${PRIVATE_APP_ACCESS}`,
+        'Content-Type': 'application/json'
+    };
+    
+    const requestData = {
+        filterGroups: [
+            {
+                filters: [
+                    {
+                        propertyName: 'name',
+                        value: searchTerm,
+                        operator: 'EQ'
+                    }
+                ]
+            }
+        ]
+    };
+    
+    try {
+        const resp = await axios.post(searchUrl, requestData, { headers });
+        const total = resp.data.total;
+        if(total > 0){
+            const id = resp.data.results[0].id;
+            const update = {
+                properties: {
+                    "age": req.body.ageVal,
+                    "breed": req.body.breedVal,
+                    "weight": req.body.weightVal
+                }
+            }
+
+            const updatePet = `https://api.hubapi.com/crm/v3/objects/2-20576949/${id}`;
+
+            try { 
+                await axios.patch(updatePet, update, { headers } );
+            } catch(err) {
+                console.error(err);
+            }
+
+        }else{
+            const create = {
+                properties: {
+                    "age": req.body.ageVal,
+                    "breed": req.body.breedVal,
+                    "weight": req.body.weightVal,
+                    "name": req.body.nameVal
+                }
+            }
+
+            const createPet = `https://api.hubapi.com/crm/v3/objects/2-20576949`;
+
+            try { 
+                await axios.post(createPet, create, { headers } );
+            } catch(err) {
+                console.error(err);
+            }
+        }
+
+        res.redirect('/');
+
+
+    } catch (err) {
+        console.error(err);
+    }
+
+});
 
 /** 
 * * This is sample code to give you a reference for how you should structure your calls. 
